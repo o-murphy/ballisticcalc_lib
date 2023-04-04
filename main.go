@@ -46,6 +46,7 @@ func CalculateTrajectory(
 	zeroingDistance C.double,
 	twistDirection C.int,
 	twistRate C.double,
+	sightHeight C.double,
 	maxShotDistance C.double,
 	calculationStep C.double,
 	maxCalculationSteSize C.double,
@@ -122,7 +123,7 @@ func CalculateTrajectory(
 		unit.MustCreateDistance(float64(twistRate), twistUnitsB),
 	)
 	weapon := extball.CreateWeaponWithTwist(
-		unit.MustCreateDistance(2, sightHeightUnitsB),
+		unit.MustCreateDistance(float64(sightHeight), sightHeightUnitsB),
 		zero,
 		twist,
 	)

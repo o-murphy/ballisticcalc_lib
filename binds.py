@@ -37,7 +37,7 @@ class BallisticsCalculator:
         self.lib.CalculateTrajectory.argtypes = [
             c_double, c_int, c_double, c_double, c_double, c_double,
             c_double, c_int, c_double, c_double, c_double, c_double,
-            c_double, c_double, c_double, c_double, c_double,
+            c_double, c_double, c_double, c_double, c_double, c_double,
             c_int, c_int, c_int, c_int, c_int, c_int, c_int,
             c_int, c_int, c_int, c_int, c_int, c_int, c_int,
         ]
@@ -62,11 +62,12 @@ if __name__ == '__main__':
         bulletDiameter=0.308,
         bulletLength=1.282,
         bulletWeight=168,
-        muzzleVelocity=2750,
+        muzzleVelocity=800,
         zeroingDistance=100,
         twistDirection=TwistDirection.Right,
         twistRate=11.24,
-        maxShotDistance=1000,
+        sightHeight=90,
+        maxShotDistance=2000,
         calculationStep=100,
         maxCalculationSteSize=0,
         windVelocity=5,
@@ -75,10 +76,10 @@ if __name__ == '__main__':
         pressure=960,
         temperature=15,
         humidity=50,
-        sightHeightUnits=unit.Distance.Inch,
+        sightHeightUnits=unit.Distance.Millimeter,
         twistUnits=unit.Distance.Inch,
-        velocityUnits=unit.Velocity.FPS,
-        distanceUnits=unit.Distance.Foot,
+        velocityUnits=unit.Velocity.MPS,
+        distanceUnits=unit.Distance.Meter,
         diameterUnits=unit.Distance.Inch,
         lengthUnits=unit.Distance.Inch,
         weightUnits=unit.Weight.Grain,
@@ -93,8 +94,52 @@ if __name__ == '__main__':
 
     bc = BallisticsCalculator()
     trajectory = bc.calculate_trajectory(example)
-    print(trajectory)
+    [print(i) for i in trajectory]
     # bc.fill()
 
     # lib = cdll.LoadLibrary(LIB_PATH.as_posix())
     # lib.Fill()
+
+    import timeit
+
+    def loops():
+        global example
+        example = BallisticProfile(
+            bcValue=0.223,
+            dragTable=DragTable.G7,
+            bulletDiameter=0.308,
+            bulletLength=1.282,
+            bulletWeight=168,
+            muzzleVelocity=example.muzzleVelocity + 1,
+            zeroingDistance=100,
+            twistDirection=TwistDirection.Right,
+            twistRate=11.24,
+            sightHeight=90,
+            maxShotDistance=2000,
+            calculationStep=100,
+            maxCalculationSteSize=0,
+            windVelocity=example.windVelocity + 0.1,
+            windDirection=-45,
+            altitude=11,
+            pressure=example.pressure + 1,
+            temperature=15,
+            humidity=50,
+            sightHeightUnits=unit.Distance.Millimeter,
+            twistUnits=unit.Distance.Inch,
+            velocityUnits=unit.Velocity.MPS,
+            distanceUnits=unit.Distance.Meter,
+            diameterUnits=unit.Distance.Inch,
+            lengthUnits=unit.Distance.Inch,
+            weightUnits=unit.Weight.Grain,
+            temperatureUnits=unit.Temperature.Celsius,
+            pressureUnits=unit.Pressure.MmHg,
+            dropUnits=unit.Distance.Centimeter,
+            pathUnits=unit.Angular.CmPer100M,
+            angularUnits=unit.Angular.Degree,
+            energyUnits=unit.Energy.Joule,
+            ogwUnits=unit.Weight.Kilogram,
+        )
+        bc.calculate_trajectory(example)
+
+    t = timeit.timeit(loops, number=100)
+    print(t)

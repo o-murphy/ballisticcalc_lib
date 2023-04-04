@@ -14,6 +14,7 @@ class BallisticProfile(NamedTuple):
     zeroingDistance: float
     twistDirection: TwistDirection
     twistRate: float
+    sightHeight: float
     maxShotDistance: float
     calculationStep: float
     maxCalculationSteSize: float
