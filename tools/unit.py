@@ -1,7 +1,7 @@
-from enum import IntFlag
+from enum import IntEnum
 
 
-class Angular(IntFlag):
+class Angular(IntEnum):
     Radian = 0
     Degree = 1
     MOA = 2
@@ -12,7 +12,7 @@ class Angular(IntFlag):
     CmPer100M = 7
 
 
-class Distance(IntFlag):
+class Distance(IntEnum):
     Inch = 10
     Foot = 11
     Yard = 12
@@ -25,12 +25,12 @@ class Distance(IntFlag):
     Line = 19
 
 
-class Energy(IntFlag):
+class Energy(IntEnum):
     FootPound = 30
     Joule = 31
 
 
-class Pressure(IntFlag):
+class Pressure(IntEnum):
     MmHg = 40
     InHg = 41
     Bar = 42
@@ -38,14 +38,14 @@ class Pressure(IntFlag):
     PSI = 44
 
 
-class Temperature(IntFlag):
+class Temperature(IntEnum):
     Fahrenheit = 50
     Celsius = 51
     Kelvin = 52
     Rankin = 53
 
 
-class Velocity(IntFlag):
+class Velocity(IntEnum):
     MPS = 60
     KMH = 61
     FPS = 62
@@ -53,7 +53,7 @@ class Velocity(IntFlag):
     KT = 64
 
 
-class Weight(IntFlag):
+class Weight(IntEnum):
     Grain = 70
     Ounce = 71
     Gram = 72

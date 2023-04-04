@@ -1,23 +1,38 @@
 package main
 
+import "C"
 import (
-	"C"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	extball "github.com/gehtsoft-usa/go_ballisticcalc"
 	"github.com/gehtsoft-usa/go_ballisticcalc/bmath/unit"
-	"reflect"
+	"math"
 )
 
-////export CreateAngular
-//func CreateAngular(value C.double, units C.int) *unit.Angular {
-//	angular, _ := unit.CreateAngular(float64(value), byte(units))
-//	return &angular
-//}
+type CalculatedTrajectoryData struct {
+	TravelledDistance float64
+	Velocity          float64
+	Time              float64
+	Drop              float64
+	DropAdjustment    float64
+	Windage           float64
+	WindageAdjustment float64
+	Energy            float64
+	OptimalGameWeight float64
+	MachVelocity      float64
+}
 
-//export CreateBallisticCoefficient
-func CreateBallisticCoefficient(value C.double, DragTable C.int) (C.double, C.int) {
-	bc, _ := extball.CreateBallisticCoefficient(float64(value), byte(DragTable))
-	return C.double(bc.Value()), C.int(bc.Table())
+func toJson(data []CalculatedTrajectoryData) *C.char {
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("error:", err)
+		return nil
+	}
+
+	encodedBytes := make([]byte, base64.StdEncoding.EncodedLen(len(jsonData)))
+	base64.StdEncoding.Encode(encodedBytes, jsonData)
+	return C.CString(string(encodedBytes))
 }
 
 //export CalculateTrajectory
@@ -55,40 +70,59 @@ func CalculateTrajectory(
 	angularUnits C.int,
 	energyUnits C.int,
 	ogwUnits C.int,
-) {
+) *C.char {
+
+	// converting int enum ty byte
+	distanceUnitsB := byte(distanceUnits)
+	velocityUnitsB := byte(velocityUnits)
+	diameterUnitsB := byte(diameterUnits)
+	lengthUnitsB := byte(lengthUnits)
+	weightUnitsB := byte(weightUnits)
+	pressureUnitsB := byte(pressureUnits)
+	temperatureUnitsB := byte(temperatureUnits)
+	twistUnitsB := byte(twistUnits)
+	sightHeightUnitsB := byte(sightHeightUnits)
+	angularUnitsB := byte(angularUnits)
+	dropUnitsB := byte(dropUnits)
+	pathUnitsB := byte(pathUnits)
+	energyUnitsB := byte(energyUnits)
+	ogwUnitsB := byte(ogwUnits)
 
 	bc, _ := extball.CreateBallisticCoefficient(float64(bcValue), byte(dragTable))
+
 	projectile := extball.CreateProjectileWithDimensions(
 		bc,
-		unit.MustCreateDistance(float64(bulletDiameter), byte(diameterUnits)),
-		unit.MustCreateDistance(float64(bulletLength), byte(lengthUnits)),
-		unit.MustCreateWeight(float64(bulletWeight), byte(weightUnits)),
+		unit.MustCreateDistance(float64(bulletDiameter), diameterUnitsB),
+		unit.MustCreateDistance(float64(bulletLength), lengthUnitsB),
+		unit.MustCreateWeight(float64(bulletWeight), weightUnitsB),
 	)
 	ammo := extball.CreateAmmunition(
 		projectile,
-		unit.MustCreateVelocity(float64(muzzleVelocity), byte(velocityUnits)),
+		unit.MustCreateVelocity(float64(muzzleVelocity), velocityUnitsB),
 	)
-	atmosphere, error := extball.CreateAtmosphere(
-		unit.MustCreateDistance(float64(altitude), byte(distanceUnits)),
-		unit.MustCreatePressure(float64(pressure), byte(pressureUnits)),
-		unit.MustCreateTemperature(float64(temperature), byte(temperatureUnits)),
+	atmosphere, err := extball.CreateAtmosphere(
+		unit.MustCreateDistance(float64(altitude), distanceUnitsB),
+		unit.MustCreatePressure(float64(pressure), pressureUnitsB),
+		unit.MustCreateTemperature(float64(temperature), temperatureUnitsB),
 		float64(humidity),
 	)
 
-	if error != nil {
-		atmosphere = extball.CreateICAOAtmosphere(unit.MustCreateDistance(float64(altitude), byte(distanceUnits)))
+	if err != nil {
+		atmosphere = extball.CreateICAOAtmosphere(
+			unit.MustCreateDistance(float64(altitude), distanceUnitsB),
+		)
 	}
 
 	zero := extball.CreateZeroInfoWithAnotherAmmoAndAtmosphere(
-		unit.MustCreateDistance(float64(zeroingDistance), byte(distanceUnits)),
+		unit.MustCreateDistance(float64(zeroingDistance), distanceUnitsB),
 		ammo, atmosphere,
 	)
 	twist := extball.CreateTwist(
 		byte(twistDirection),
-		unit.MustCreateDistance(float64(twistRate), byte(twistUnits)),
+		unit.MustCreateDistance(float64(twistRate), twistUnitsB),
 	)
 	weapon := extball.CreateWeaponWithTwist(
-		unit.MustCreateDistance(2, byte(sightHeightUnits)),
+		unit.MustCreateDistance(2, sightHeightUnitsB),
 		zero,
 		twist,
 	)
@@ -97,7 +131,7 @@ func CalculateTrajectory(
 
 	if maxCalculationSteSize > 0 {
 		calc.SetMaximumCalculatorStepSize(
-			unit.MustCreateDistance(float64(maxCalculationSteSize), byte(distanceUnits)),
+			unit.MustCreateDistance(float64(maxCalculationSteSize), distanceUnitsB),
 		)
 	}
 
@@ -105,33 +139,44 @@ func CalculateTrajectory(
 
 	shotInfo := extball.CreateShotParameters(
 		sightAngle,
-		unit.MustCreateDistance(float64(maxShotDistance), byte(distanceUnits)),
-		unit.MustCreateDistance(float64(calculationStep), byte(distanceUnits)),
+		unit.MustCreateDistance(float64(maxShotDistance), distanceUnitsB),
+		unit.MustCreateDistance(float64(calculationStep), distanceUnitsB),
 	)
 	wind := extball.CreateOnlyWindInfo(
-		unit.MustCreateVelocity(float64(windVelocity), byte(velocityUnits)),
-		unit.MustCreateAngular(float64(windDirection), byte(angularUnits)),
+		unit.MustCreateVelocity(float64(windVelocity), velocityUnitsB),
+		unit.MustCreateAngular(float64(windDirection), angularUnitsB),
 	)
 
 	data := calc.Trajectory(ammo, weapon, atmosphere, shotInfo, wind)
-	//return data
-	for _, value := range data {
-		fmt.Println(
-			value.TravelledDistance().In(byte(distanceUnits)),
-			value.Velocity().In(byte(velocityUnits)),
-			value.Time().Seconds(),
-			value.Drop().In(byte(dropUnits)),
-			value.DropAdjustment().In(byte(pathUnits)),
-			value.Windage().In(byte(dropUnits)),
-			value.WindageAdjustment().In(byte(pathUnits)),
-			value.Energy().In(byte(energyUnits)),
-			value.OptimalGameWeight().In(byte(ogwUnits)),
-			value.MachVelocity(),
-		)
+
+	ranges := make([]CalculatedTrajectoryData, len(data))
+
+	for i, value := range data {
+
+		windageAdjustment := value.WindageAdjustment().In(pathUnitsB)
+		if math.IsNaN(value.WindageAdjustment().In(pathUnitsB)) {
+			windageAdjustment = 0
+		}
+
+		ranges[i] = CalculatedTrajectoryData{
+			TravelledDistance: value.TravelledDistance().In(distanceUnitsB),
+			Velocity:          value.Velocity().In(velocityUnitsB),
+			Time:              value.Time().Seconds(),
+			Drop:              value.Drop().In(dropUnitsB),
+			DropAdjustment:    value.DropAdjustment().In(pathUnitsB),
+			Windage:           value.Windage().In(dropUnitsB),
+			WindageAdjustment: windageAdjustment,
+			Energy:            value.Energy().In(energyUnitsB),
+			OptimalGameWeight: value.OptimalGameWeight().In(ogwUnitsB),
+			MachVelocity:      value.MachVelocity(),
+		}
+
 	}
+
+	return toJson(ranges)
+
 }
 
 func main() {
-	angular, _ := unit.CreateAngular(10, unit.AngularMil)
-	fmt.Println(angular, reflect.TypeOf(angular), &angular)
+
 }

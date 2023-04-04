@@ -1,6 +1,7 @@
 from typing import NamedTuple
 
-from flags import DragTable, TwistDirection
+from . import unit
+from .flags import *
 
 
 class BallisticProfile(NamedTuple):
@@ -38,3 +39,16 @@ class BallisticProfile(NamedTuple):
     angularUnits: unit.Angular
     energyUnits: unit.Energy
     ogwUnits: unit.Weight
+
+
+class TrajectoryData(NamedTuple):
+    TravelledDistance: float
+    Velocity: float
+    Time: float
+    Drop: float
+    DropAdjustment: float
+    Windage: float
+    WindageAdjustment: float
+    Energy: float
+    OptimalGameWeight: float
+    MachVelocity: float

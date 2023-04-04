@@ -1,36 +1,60 @@
+import base64
 from ctypes import *
 from pathlib import Path
 
-from flags import *
-from .types import BallisticProfile
-
-dllpath = Path(Path(__file__).parent, 'extball.dll')
-lib = cdll.LoadLibrary(dllpath.as_posix())
+from tools import *
+import json
 
 
-lib.CalculateTrajectory.argtypes = [
-    c_double, c_int, c_double, c_double, c_double, c_double,
-    c_double, c_int, c_double, c_double, c_double, c_double,
-    c_double, c_double, c_double, c_double, c_double,
-    c_int, c_int, c_int, c_int, c_int, c_int, c_int,
-    c_int, c_int, c_int, c_int, c_int, c_int, c_int,
-]
-# lib.CalculateTrajectory.argtypes = [BallisticProfile._field_types]
-
-# class CalculateTrajectory_return(Structure):
-#     _fields_ = [('bc', c_double), ('dt', c_int)]
-# lib.CalculateTrajectory.restype = CalculateTrajectory_return
-
+LIB_PATH = Path(Path(__file__).parent, 'extball.dll')
 
 
 class BallisticsCalculator:
-    def __init__(self, profile: BallisticProfile):
-        self.profile = profile
+
+    class TrajectoryData(Structure):
+        _fields_ = [
+            ('traveled_distance', c_double),
+            ('velocity', c_double),
+            ('time', c_double),
+            ('drop', c_double),
+            ('drop_adjustment', c_double),
+            ('windage', c_double),
+            ('windage_adjustment', c_double),
+            ('energy', c_double),
+            ('optimal_game_weight', c_double),
+            ('mach_velocity', c_double),
+        ]
+
+    # class CalculateTrajectory_return(Structure):
+    #     _fields_ = [
+    #         ('bc', c_double),
+    #         ('dt', c_int)
+    #     ]
+
+    def __init__(self):
+        self.lib = cdll.LoadLibrary(LIB_PATH.as_posix())
+
+        self.lib.CalculateTrajectory.argtypes = [
+            c_double, c_int, c_double, c_double, c_double, c_double,
+            c_double, c_int, c_double, c_double, c_double, c_double,
+            c_double, c_double, c_double, c_double, c_double,
+            c_int, c_int, c_int, c_int, c_int, c_int, c_int,
+            c_int, c_int, c_int, c_int, c_int, c_int, c_int,
+        ]
+
+        self.lib.CalculateTrajectory.restype = c_char_p
+
+    def calculate_trajectory(self, profile: BallisticProfile):
+        result_bytes = base64.b64decode(self.lib.CalculateTrajectory(*profile))
+        result = result_bytes.decode('utf-8')
+        data = json.loads(result)
+        return [TrajectoryData(**i) for i in data]
+
+    def fill(self):
+        return self.lib.Fill()
 
 
 if __name__ == '__main__':
-    print(BallisticProfile._field_types)
-
 
     example = BallisticProfile(
         bcValue=0.223,
@@ -67,4 +91,10 @@ if __name__ == '__main__':
         ogwUnits=unit.Weight.Kilogram,
     )
 
-    ret = lib.CalculateTrajectory(*example)
+    bc = BallisticsCalculator()
+    trajectory = bc.calculate_trajectory(example)
+    print(trajectory)
+    # bc.fill()
+
+    # lib = cdll.LoadLibrary(LIB_PATH.as_posix())
+    # lib.Fill()
